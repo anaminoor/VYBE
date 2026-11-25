@@ -1,0 +1,32 @@
+HOW TO ADD THE REAL SONGS AND COVERS
+====================================
+
+Put each song's audio file and cover image in THIS folder (C:\fornoor\songs).
+You can keep the names they downloaded with: any file whose name contains the
+song title works (e.g. "Justin Bieber - What Do You Mean_.mp3"). If two files
+fit, the one that also names the artist is used. Or name them exactly like
+below. No restart needed: refresh the page after adding files.
+
+  Song                              Audio file              Cover image
+  --------------------------------  ----------------------  ----------------------
+  What Do You Mean? - Justin Bieber what-do-you-mean.mp3    what-do-you-mean.jpg
+  Die For You - The Weeknd          die-for-you.mp3         die-for-you.jpg
+  Blinding Lights - The Weeknd      blinding-lights.mp3     blinding-lights.jpg
+  Bure Din - Seedhe Maut            bure-din.mp3            bure-din.jpg
+  Tu Aake Dekhle - King             tu-aake-dekhle.mp3      tu-aake-dekhle.jpg
+  Call Out My Name - The Weeknd     call-out-my-name.mp3    call-out-my-name.jpg
+  Ivy - Frank Ocean                 ivy.mp3                 ivy.jpg
+  Attention - Charlie Puth          attention.mp3           attention.jpg
+  Treat You Better - Shawn Mendes   treat-you-better.mp3    treat-you-better.jpg
+
+Other formats also work:
+  audio:  .mp3 .m4a .aac .ogg .opus .wav .flac .webm
+  covers: .jpg .jpeg .png .webp   (square images look best, e.g. 600 x 600)
+
+The title has to appear as whole words (punctuation does not matter).
+A song you add yourself with "Add song" works the same way.
+
+Without a file, a song still works: it gets generated artwork and "plays"
+silently on a timer. When you add the audio, its real length is used.
+
+Use audio and images you are allowed to use (for example songs you bought).

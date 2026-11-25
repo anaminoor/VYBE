@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-accent="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VYBE</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%238b6cff'/%3E%3Cpath d='M13 22V10l10-2v11' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='10.500' cy='22' r='2.500' fill='white'/%3E%3Ccircle cx='20.500' cy='19' r='2.500' fill='white'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Apply the saved theme and accent before the page draws, so it never flashes.
+    (function () {
+      var root = document.documentElement;
+      try {
+        var theme = localStorage.getItem('theme');
+        root.dataset.theme = theme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        var accent = localStorage.getItem('accent');
+        if (accent && accent !== 'auto') {
+          root.dataset.accent = 'fixed';
+          root.style.setProperty('--fixed-h', accent);
+        }
+      } catch (e) {}
+      // The start-up screen shows once per browser session, and never when motion is reduced.
+      var seen = false;
+      try { seen = sessionStorage.getItem('splash') === '1'; sessionStorage.setItem('splash', '1'); } catch (e) {}
+      if (seen || window.matchMedia('(prefers-reduced-motion: reduce)').matches) root.classList.add('no-splash');
+    })();
+  </script>
+</head>
+<body>
+  <!-- ===================== Start-up screen ===================== -->
+  <div class="splash" id="splash" role="status" aria-label="Loading">
+    <div class="splash-glow"></div>
+    <div class="splash-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="splash-name">VYBE</div>
+    <div class="splash-bar" aria-hidden="true"><i></i></div>
+    <div class="splash-error" id="splash-error" hidden>
+      <strong>Can't reach the Java server</strong>
+      <span>Start it from the project folder with</span>
+      <code>java java\Main.java</code>
+      <button class="btn primary" id="splash-retry" type="button">Try again</button>
+    </div>
+  </div>
+
+  <div class="app">
+
+    <!-- ===================== Sidebar ===================== -->
+    <aside class="sidebar">
+      <div class="side-panel side-top">
+        <a class="brand" href="#/home">
+          <span class="brand-mark" data-icon="music"></span>
+          <span class="brand-name">VYBE</span>
+        </a>
+        <nav class="nav" id="nav-main" aria-label="Main"></nav>
+      </div>
+
+      <div class="side-panel side-lib">
+        <div class="lib-head">
+          <span class="lib-title"><span data-icon="library"></span>Your Library</span>
+          <button class="icon-btn small" id="btn-new-playlist" title="New playlist" aria-label="New playlist" data-icon="plus"></button>
+        </div>
+        <div class="nav-wrap" id="nav-wrap">
+          <nav class="nav lib" id="nav-playlists" aria-label="Your library"></nav>
+        </div>
+        <button class="btn add-song" id="btn-add-song"><span data-icon="plus"></span><span>Add song</span></button>
+      </div>
+    </aside>
+
+    <!-- ===================== Main area ===================== -->
+    <main class="main" id="main">
+      <header class="topbar" id="topbar">
+        <div class="topbar-bg" id="topbar-bg"></div>
+        <div class="nav-arrows">
+          <button class="icon-btn dark" data-cmd="back" title="Go back" aria-label="Go back" data-icon="back"></button>
+          <button class="icon-btn dark" data-cmd="forward" title="Go forward" aria-label="Go forward" data-icon="forward"></button>
+        </div>
+        <label class="search">
+          <span data-icon="search"></span>
+          <input id="search" type="search" placeholder="Search by title or artist" autocomplete="off" aria-label="Search by title or artist">
+          <kbd>/</kbd>
+        </label>
+
+        <!-- Appears when you scroll down -->
+        <div class="compact" id="compact" aria-hidden="true">
+          <button class="btn primary round small" id="compact-play" title="Play" aria-label="Play" tabindex="-1" data-icon="play"></button>
+          <span class="compact-title" id="compact-title"></span>
+        </div>
+
+        <div class="scroll-progress" id="scroll-progress"></div>
+
+        <div class="topbar-actions">
+          <button class="btn ghost palette-btn" id="btn-palette" title="Quick search (Ctrl+K)"><span data-icon="command"></span><span>Quick search</span><kbd>Ctrl K</kbd></button>
+          <button class="icon-btn" id="btn-shortcuts" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts" data-icon="keyboard"></button>
+          <button class="icon-btn" id="btn-settings" title="Accent colour" aria-label="Accent colour" data-icon="palette"></button>
+          <button class="icon-btn" id="btn-theme" title="Switch light / dark theme" aria-label="Switch light / dark theme"></button>
+        </div>
+      </header>
+
+      <div class="view" id="view"></div>
+      <button class="to-top" id="to-top" title="Back to top" aria-label="Back to top" data-icon="up"></button>
+    </main>
+
+    <!-- ===================== Player bar ===================== -->
+    <footer class="player" id="player">
+      <div class="np">
+        <button class="np-open" data-cmd="full" title="Open full screen (F)" aria-label="Open full-screen player">
+          <span class="art big" id="np-art"></span>
+          <span class="np-open-hint" data-icon="expand"></span>
+        </button>
+        <div class="np-text">
+          <div class="np-title" id="np-title">Nothing playing</div>
+          <a class="np-artist" id="np-artist">Pick a song to start</a>
+        </div>
+        <button class="icon-btn like" data-cmd="like" data-like title="Like (L)" aria-label="Like" data-icon="heart" hidden></button>
+      </div>
+
+      <div class="controls">
+        <div class="buttons">
+          <button class="icon-btn" data-cmd="prev" title="Previous (P)" aria-label="Previous" data-icon="prev"></button>
+          <button class="play-btn" data-cmd="toggle" title="Play (Space)" aria-label="Play"></button>
+          <button class="icon-btn" data-cmd="next" title="Next (N)" aria-label="Next" data-icon="next"></button>
+          <button class="icon-btn repeat" data-cmd="repeat" title="Repeat: off" aria-label="Repeat"><span data-icon="repeat"></span><b class="one">1</b></button>
+        </div>
+        <div class="progress-row">
+          <span class="time" data-elapsed>0:00</span>
+          <div class="progress" role="slider" aria-label="Seek" tabindex="0">
+            <div class="progress-track"><div class="progress-fill"></div></div>
+            <div class="progress-head"></div>
+            <div class="progress-tip"></div>
+          </div>
+          <span class="time" data-total>0:00</span>
+        </div>
+      </div>
+
+      <div class="extras">
+        <canvas class="viz viz-mini" id="viz-mini" aria-hidden="true"></canvas>
+        <button class="chip" id="btn-speed" title="Playback speed">1×</button>
+        <button class="icon-btn has-badge" id="btn-sleep" title="Sleep timer" aria-label="Sleep timer"><span data-icon="timer"></span><b class="badge" id="sleep-badge" hidden></b></button>
+        <button class="icon-btn has-badge" data-cmd="queue" id="btn-queue" title="Up next (Q)" aria-label="Up next"><span data-icon="queue"></span><b class="badge" id="queue-badge" hidden></b></button>
+        <div class="volume">
+          <button class="icon-btn" id="btn-mute" title="Mute (M)" aria-label="Mute"></button>
+          <input type="range" id="volume" min="0" max="100" value="80" aria-label="Volume">
+        </div>
+      </div>
+    </footer>
+
+    <!-- ===================== Up next panel ===================== -->
+    <aside class="queue-panel" id="queue-panel" aria-label="Up next" inert>
+      <header>
+        <h2>Up next</h2>
+        <button class="icon-btn" data-cmd="queue" title="Close" aria-label="Close" data-icon="x"></button>
+      </header>
+      <div class="queue-body" id="queue-body"></div>
+    </aside>
+  </div>
+
+  <!-- ===================== Full-screen player ===================== -->
+  <section class="fs" id="fs" aria-label="Now playing" inert>
+    <div class="fs-bg" aria-hidden="true"></div>
+    <header class="fs-top">
+      <button class="icon-btn" data-cmd="full" title="Close (Esc)" aria-label="Close full screen" data-icon="chevron-down"></button>
+      <div class="fs-from" id="fs-from"></div>
+      <span class="fs-top-spacer"></span>
+    </header>
+    <div class="fs-body">
+      <div class="fs-left">
+        <div class="fs-art" id="fs-art"></div>
+        <div class="fs-meta">
+          <div class="fs-names">
+            <h2 id="fs-title">Nothing playing</h2>
+            <a id="fs-artist"></a>
+          </div>
+          <button class="icon-btn like" data-cmd="like" data-like title="Like (L)" aria-label="Like" data-icon="heart"></button>
+        </div>
+        <canvas class="viz viz-big" id="viz-big" aria-hidden="true"></canvas>
+        <div class="progress-row">
+          <span class="time" data-elapsed>0:00</span>
+          <div class="progress" role="slider" aria-label="Seek" tabindex="0">
+            <div class="progress-track"><div class="progress-fill"></div></div>
+            <div class="progress-head"></div>
+            <div class="progress-tip"></div>
+          </div>
+          <span class="time" data-total>0:00</span>
+        </div>
+        <div class="buttons big">
+          <button class="icon-btn repeat" data-cmd="repeat" title="Repeat" aria-label="Repeat"><span data-icon="repeat"></span><b class="one">1</b></button>
+          <button class="icon-btn" data-cmd="prev" title="Previous (P)" aria-label="Previous" data-icon="prev"></button>
+          <button class="play-btn" data-cmd="toggle" title="Play (Space)" aria-label="Play"></button>
+          <button class="icon-btn" data-cmd="next" title="Next (N)" aria-label="Next" data-icon="next"></button>
+          <button class="icon-btn" id="fs-queue-tab" title="Show up next" aria-label="Show up next" data-icon="queue"></button>
+        </div>
+      </div>
+      <div class="fs-right">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="lyrics" role="tab">Lyrics</button>
+          <button class="tab" data-tab="queue" role="tab">Up next</button>
+        </div>
+        <div class="fs-pane lyrics" id="fs-lyrics"></div>
+        <div class="fs-pane queue-body" id="fs-queue" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pop-up menu, dialog, command palette, selection bar, toasts -->
+  <div class="menu raised" id="menu" hidden></div>
+
+  <div class="dialog-backdrop" id="dialog-backdrop" hidden></div>
+  <dialog class="dialog" id="dialog" aria-modal="true"><div id="dialog-body"></div></dialog>
+
+  <div class="palette-wrap" id="palette" hidden>
+    <div class="palette raised" role="dialog" aria-label="Quick search">
+      <label class="palette-input">
+        <span data-icon="search"></span>
+        <input id="palette-input" placeholder="Search songs, artists, albums, playlists and actions" autocomplete="off" aria-label="Quick search">
+        <kbd>Esc</kbd>
+      </label>
+      <div class="palette-list" id="palette-list"></div>
+    </div>
+  </div>
+
+  <div class="select-bar raised" id="select-bar" inert>
+    <span class="select-count" id="select-count"></span>
+    <button class="btn small" data-sel="queue"><span data-icon="queue-add"></span>Play next</button>
+    <button class="btn small" data-sel="add"><span data-icon="plus"></span>Add to playlist</button>
+    <button class="btn small" data-sel="like"><span data-icon="heart"></span>Like</button>
+    <button class="btn small" data-sel="unlike">Unlike</button>
+    <button class="btn small danger" data-sel="remove"><span data-icon="trash"></span>Remove</button>
+    <button class="icon-btn small" data-sel="clear" title="Clear selection (Esc)" aria-label="Clear selection" data-icon="x"></button>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+
+  <script src="js/api.js"></script>
+  <script src="js/motion.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/visualiser.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/nowplaying.js"></script>
+  <script src="js/forms.js"></script>
+  <script src="js/selection.js"></script>
+  <script src="js/palette.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
