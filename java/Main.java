@@ -8,10 +8,18 @@ import java.nio.file.Path;
  * Run from the project folder:   java java/Main.java
  * Then open:                      http://localhost:8080
  * Another port:                   java java/Main.java 9090
+ * Terminal version (no sound):    java java/Main.java cli
  */
 public class Main {
     public static void main(String[] args) throws Exception {
         Path base = findProjectFolder();
+
+        // "cli" starts the terminal version instead of the website (no sound, same data).
+        if (args.length > 0 && args[0].equalsIgnoreCase("cli")) {
+            new Cli(base).run();
+            return;
+        }
+
         int port = args.length > 0 ? Integer.parseInt(args[0]) : 8080;
 
         MusicEngine engine = new MusicEngine();

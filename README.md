@@ -28,6 +28,30 @@ java --enable-native-access=ALL-UNNAMED -cp "out;lib/*" Main
 
 Use a current Edge, Chrome or Firefox.
 
+## Terminal version (no sound)
+
+The same app also runs as text commands in the terminal. It uses the same Java logic and the same
+database, so playlists you make there show up on the website and the other way round.
+
+```
+java --enable-native-access=ALL-UNNAMED -cp "lib/*" java/Main.java cli
+```
+
+Or double-click `run-cli.bat`. Type `help` to see the commands, for example:
+
+```
+vybe> playlists
+vybe> new Road Trip
+vybe> add 5 1 2 3          (add songs #1, #2, #3 to playlist 5)
+vybe> sort 5 title desc
+vybe> play 5 2
+vybe> next
+```
+
+`play`, `next` and `prev` move through the playlist and count plays, but nothing is heard.
+Run only one version at a time: the website keeps its data in memory, so if both are open, the website
+would overwrite changes made in the terminal. If that happens, restart the website to pick up the terminal's changes.
+
 ## The songs
 
 The library is the 9 songs listed in `songs/Songs.txt`:
@@ -158,6 +182,7 @@ java/   Main.java             starts everything
         DataStore.java        saves / loads the SQLite database (JDBC), sample songs
         Server.java           small web server (JDK built-in) + the /api routes
         Json.java             turns data into JSON for the page
+        Cli.java              the terminal version (typed commands, no sound)
 web/    index.html            page layout
         css/style.css         design, dark and light themes, animations
         js/api.js             calls the Java API
