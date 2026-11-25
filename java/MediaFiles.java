@@ -17,7 +17,7 @@ import java.util.stream.Stream;
  * A song's files are found by name: the title in lower case with spaces as dashes.
  *   Blinding Lights  ->  songs/blinding-lights.mp3   and   songs/blinding-lights.jpg
  * Audio: .mp3 .m4a .aac .ogg .opus .wav .flac .webm      Covers: .jpg .jpeg .png .webp
- * A song with no files still works: the page shows generated artwork and simulates playback.
+ * A song with no audio file can still be added to playlists; the page just says there is no audio.
  *
  * The folder is listed again at most every 2 seconds, so files you add show up without a restart.
  * Files are streamed in pieces (HTTP "Range" requests), which is what lets the browser seek in a song.

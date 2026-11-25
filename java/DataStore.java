@@ -16,7 +16,7 @@ import java.util.Map;
  *
  * Tables:
  *   songs           id, title, artist, album, genre, year, duration, play_count, liked
- *   playlists       id, name, gradient, emoji
+ *   playlists       id, name
  *   playlist_songs  playlist_id, position, song_id, added_at      (position = play order)
  *   recent          position, song_id                             (position 0 = newest)
  *   queue_items     position, song_id                             (position 0 = plays next)
@@ -41,8 +41,7 @@ public class DataStore {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS songs (id INTEGER PRIMARY KEY, title TEXT NOT NULL, artist TEXT NOT NULL,"
                     + " album TEXT NOT NULL, genre TEXT NOT NULL, year INTEGER NOT NULL, duration INTEGER NOT NULL,"
                     + " play_count INTEGER NOT NULL DEFAULT 0, liked INTEGER NOT NULL DEFAULT 0)");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS playlists (id INTEGER PRIMARY KEY, name TEXT NOT NULL,"
-                    + " gradient INTEGER NOT NULL DEFAULT 0, emoji TEXT NOT NULL DEFAULT '')");
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS playlists (id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS playlist_songs (playlist_id INTEGER NOT NULL, position INTEGER NOT NULL,"
                     + " song_id INTEGER NOT NULL, added_at INTEGER NOT NULL, PRIMARY KEY (playlist_id, position))");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS recent (position INTEGER PRIMARY KEY, song_id INTEGER NOT NULL)");
@@ -79,8 +78,6 @@ public class DataStore {
             try (Statement st = c.createStatement(); ResultSet rs = st.executeQuery("SELECT * FROM playlists ORDER BY rowid")) {
                 while (rs.next()) {
                     Playlist p = new Playlist(rs.getInt("id"), rs.getString("name"));
-                    p.gradient = Math.floorMod(rs.getInt("gradient"), MusicEngine.GRADIENTS);
-                    p.emoji = rs.getString("emoji");
                     e.playlists.put(p.id, p);
                 }
             }
@@ -146,13 +143,11 @@ public class DataStore {
                     }
                     ps.executeBatch();
                 }
-                try (PreparedStatement pl = c.prepareStatement("INSERT INTO playlists VALUES (?,?,?,?)");
+                try (PreparedStatement pl = c.prepareStatement("INSERT INTO playlists (id, name) VALUES (?,?)");
                      PreparedStatement ps = c.prepareStatement("INSERT INTO playlist_songs VALUES (?,?,?,?)")) {
                     for (Playlist p : e.playlists.values()) {
                         pl.setInt(1, p.id);
                         pl.setString(2, p.name);
-                        pl.setInt(3, p.gradient);
-                        pl.setString(4, p.emoji);
                         pl.addBatch();
                         int position = 0;
                         for (int songId : p.songIds) {
@@ -235,7 +230,6 @@ public class DataStore {
         }
         e.ensureBuiltIns();
 
-        // No emoji covers: each playlist shows a 2 x 2 mosaic of its songs' artwork instead.
         Playlist weeknd = e.createPlaylist("The Weeknd Mix");
         for (int songId : new int[] {3, 2, 6}) e.addSong(weeknd.id, songId);
 

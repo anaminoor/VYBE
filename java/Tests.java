@@ -92,16 +92,6 @@ public class Tests {
             rejects(() -> e.createPlaylist("   "), "empty name");
         });
 
-        test("moveSong reorders and checks bounds", () -> {
-            MusicEngine e = fresh();
-            int p = e.createPlaylist("Test").id;
-            for (int id : List.of(1, 2, 3)) e.addSong(p, id);
-            e.moveSong(p, 3, 0);
-            equal(List.of(3, 1, 2), e.playlist(p).songIds, "after move");
-            rejects(() -> e.moveSong(p, 3, 3), "index too big");
-            rejects(() -> e.moveSong(p, 3, -1), "negative index");
-        });
-
         // ---- 2. next / previous
         test("next and previous walk through the playlist", () -> {
             MusicEngine e = fresh();
@@ -204,47 +194,24 @@ public class Tests {
         });
 
         // ---- extras
+        test("queue: remove one song and clear", () -> {
+            MusicEngine e = fresh();
+            e.queueAdd(4);
+            e.queueAdd(6);
+            e.queueAdd(8);
+            e.queueRemove(1);
+            equal(List.of(4, 8), ids(e.queuedSongs()), "after removing the middle one");
+            rejects(() -> e.queueRemove(5), "position out of range");
+            e.queueClear();
+            equal(0, e.queuedSongs().size(), "after clear");
+        });
+
         test("liking a song puts it in Liked Songs", () -> {
             MusicEngine e = fresh();
             e.toggleLike(2);
             check(e.playlist(MusicEngine.LIKED_ID).contains(2), "liked");
             e.toggleLike(2);
             check(!e.playlist(MusicEngine.LIKED_ID).contains(2), "unliked");
-        });
-
-        test("song form validation reports every problem", () -> {
-            MusicEngine e = fresh();
-            try {
-                e.createSong("", "", "A", "G", "abc", "xx");
-                throw new AssertionError("should have failed");
-            } catch (ValidationException v) {
-                check(v.fields.containsKey("title") && v.fields.containsKey("artist")
-                        && v.fields.containsKey("year") && v.fields.containsKey("duration"), "all fields reported: " + v.fields);
-            }
-            Song s = e.createSong("New Song", "Someone", "Album", "Pop", "2024", "3:45");
-            equal(225, s.duration, "3:45 in seconds");
-            check(e.playlist(MusicEngine.LIBRARY_ID).contains(s.id), "added to All Songs");
-            try {
-                e.createSong("new song", "SOMEONE", "Album", "Pop", "2024", "3:45");
-                throw new AssertionError("duplicate accepted");
-            } catch (ValidationException v) {
-                check(v.fields.containsKey("title"), "duplicate flagged on title");
-            }
-        });
-
-        test("parseDuration", () -> {
-            equal(225, SongValidator.parseDuration("3:45"), "3:45");
-            equal(90, SongValidator.parseDuration("90"), "plain seconds");
-            equal(-1, SongValidator.parseDuration("3:99"), "bad seconds");
-            equal(-1, SongValidator.parseDuration("abc"), "text");
-            equal(-1, SongValidator.parseDuration(null), "null");
-        });
-
-        test("artist and album pages group songs", () -> {
-            MusicEngine e = fresh();
-            equal(3, e.songsByArtist("the weeknd").size(), "Weeknd songs");
-            equal(7, e.artists().size(), "artists");
-            rejects(() -> e.songsByArtist("Nobody"), "unknown artist");
         });
 
         test("save then load gives back the same data", () -> {

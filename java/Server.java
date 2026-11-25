@@ -8,9 +8,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
@@ -65,9 +63,6 @@ public class Server {
             synchronized (engine) {
                 body = route(route, params, post);
             }
-        } catch (ValidationException e) {
-            status = 400;
-            body = Json.error(e.getMessage(), e.fields);
         } catch (IllegalArgumentException e) {
             status = 400;
             body = Json.error(e.getMessage());
@@ -85,9 +80,6 @@ public class Server {
     private String route(String route, Map<String, String> p, boolean post) {
         // ---- reading (GET)
         switch (route) {
-            case "songs":
-                return Json.playlist(engine.playlist(MusicEngine.LIBRARY_ID),
-                        engine.songsOf(MusicEngine.LIBRARY_ID, p.get("q")), engine);
             case "playlists":
                 return Json.playlists(engine);
             case "playlist": {
@@ -95,23 +87,11 @@ public class Server {
                 return Json.playlist(engine.playlist(id), engine.songsOf(id, p.get("q")), engine);
             }
             case "recent":
-                return Json.recent(engine.recentSongs(p.get("q")), engine.playback.recent.size());
+                return Json.recent(engine.recentSongs(p.get("q")));
             case "player":
                 return Json.player(engine, false);
             case "queue":
                 return Json.queue(engine);
-            case "home":
-                return Json.home(engine);
-            case "stats":
-                return Json.stats(engine);
-            case "artist":
-                return Json.artist(engine, p.get("name"));
-            case "album":
-                return Json.album(engine, p.get("name"), p.get("artist"));
-            case "search-all":
-                return Json.searchAll(engine, p.get("q"));
-            case "lyrics":
-                return Json.lyrics(engine.song(intParam(p, "songId")));
         }
 
         // ---- everything below changes data: POST only, and saved to disk afterwards
@@ -129,9 +109,6 @@ public class Server {
                 engine.deletePlaylist(intParam(p, "id"));
                 result = Json.ok();
                 break;
-            case "playlist/cover":
-                result = Json.summary(engine.setCover(intParam(p, "id"), intParam(p, "gradient"), p.get("emoji")), engine);
-                break;
             case "playlist/add":
                 engine.addSong(intParam(p, "id"), intParam(p, "songId"));
                 result = Json.summary(engine.playlist(intParam(p, "id")), engine);
@@ -139,10 +116,6 @@ public class Server {
             case "playlist/remove":
                 engine.removeSong(intParam(p, "id"), intParam(p, "songId"));
                 result = Json.summary(engine.playlist(intParam(p, "id")), engine);
-                break;
-            case "playlist/move":
-                engine.moveSong(intParam(p, "id"), intParam(p, "songId"), intParam(p, "to"));
-                result = Json.ok();
                 break;
             case "playlist/shuffle":
                 engine.shuffle(intParam(p, "id"));
@@ -153,26 +126,9 @@ public class Server {
                 result = Json.ok();
                 break;
 
-            // several songs at once (multi-select)
-            case "batch/add":
-                result = Json.obj("changed", engine.addSongs(intParam(p, "id"), idList(p, "songIds")));
-                break;
-            case "batch/remove":
-                result = Json.obj("changed", engine.removeSongs(intParam(p, "id"), idList(p, "songIds")));
-                break;
-            case "batch/like":
-                engine.setLiked(idList(p, "songIds"), "true".equals(p.get("liked")));
-                result = Json.ok();
-                break;
-
             // player
             case "player/play":
                 engine.play(intParam(p, "playlistId"), intParam(p, "songId"));
-                result = Json.player(engine, false);
-                break;
-            case "player/play-context":
-                engine.playContext(p.get("type"), p.get("key"), p.get("artist"),
-                        p.containsKey("songId") ? intParam(p, "songId") : -1, "true".equals(p.get("shuffle")));
                 result = Json.player(engine, false);
                 break;
             case "player/next": {
@@ -191,15 +147,11 @@ public class Server {
 
             // "play next" queue
             case "queue/add":
-                for (int songId : idList(p, "songIds")) engine.queueAdd(songId);
+                engine.queueAdd(intParam(p, "songId"));
                 result = Json.player(engine, false);
                 break;
             case "queue/remove":
                 engine.queueRemove(intParam(p, "index"));
-                result = Json.player(engine, false);
-                break;
-            case "queue/play":
-                engine.queuePlay(intParam(p, "index"));
                 result = Json.player(engine, false);
                 break;
             case "queue/clear":
@@ -211,16 +163,8 @@ public class Server {
             case "like":
                 result = Json.song(engine.toggleLike(intParam(p, "songId")));
                 break;
-            case "song/create":
-                result = Json.song(engine.createSong(p.get("title"), p.get("artist"), p.get("album"),
-                        p.get("genre"), p.get("year"), p.get("duration")));
-                break;
             case "song/duration":
                 result = Json.song(engine.setDuration(intParam(p, "id"), intParam(p, "seconds")));
-                break;
-            case "song/update":
-                result = Json.song(engine.updateSong(intParam(p, "id"), p.get("title"), p.get("artist"),
-                        p.get("album"), p.get("genre"), p.get("year"), p.get("duration")));
                 break;
 
             default:
@@ -244,17 +188,6 @@ public class Server {
         } catch (RuntimeException e) {
             throw new IllegalArgumentException("Missing or invalid parameter: " + name);
         }
-    }
-
-    /** "3,8,12" -> [3, 8, 12] */
-    private static List<Integer> idList(Map<String, String> p, String name) {
-        List<Integer> ids = new ArrayList<>();
-        try {
-            for (String part : p.get(name).split(",")) ids.add(Integer.parseInt(part.trim()));
-        } catch (RuntimeException e) {
-            throw new IllegalArgumentException("Missing or invalid parameter: " + name);
-        }
-        return ids;
     }
 
     private static Map<String, String> params(String rawQuery) {

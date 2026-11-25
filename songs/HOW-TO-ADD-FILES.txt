@@ -26,7 +26,7 @@ Other formats also work:
 The title has to appear as whole words (punctuation does not matter).
 A song you add yourself with "Add song" works the same way.
 
-Without a file, a song still works: it gets generated artwork and "plays"
-silently on a timer. When you add the audio, its real length is used.
+Without a file, a song can still be added to playlists, but it has no sound.
+When you add the audio, its real length is used.
 
 Use audio and images you are allowed to use (for example songs you bought).

@@ -1,6 +1,5 @@
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -78,25 +77,21 @@ public class Json {
                 "cover", media == null ? null : media.coverUrl(s));
     }
 
-    /** Name, cover, size and total length of a playlist (no songs). */
+    /** Name, size and total length of a playlist (no songs). */
     static String summary(Playlist p, MusicEngine e) {
         int total = 0;
         for (int id : p.songIds) {
             Song s = e.songs.get(id);
             if (s != null) total += s.duration;
         }
-        // The first four songs, so the page can draw a 2x2 mosaic cover from their artwork.
-        List<Integer> art = p.songIds.subList(0, Math.min(4, p.songIds.size()));
-        return obj("id", p.id, "name", p.name, "builtIn", p.isBuiltIn(), "gradient", p.gradient,
-                "emoji", p.emoji, "count", p.songIds.size(), "duration", total,
-                "art", list(art, String::valueOf));
+        return obj("id", p.id, "name", p.name, "builtIn", p.isBuiltIn(),
+                "count", p.songIds.size(), "duration", total);
     }
 
-    /** Every playlist for the sidebar (the temporary artist/album list is left out). */
+    /** Every playlist, for the sidebar. */
     static String playlists(MusicEngine e) {
-        List<Playlist> shown = e.playlists.values().stream()
-                .filter(p -> p.id != MusicEngine.CONTEXT_ID).toList();
-        return obj("playlists", list(shown, p -> summary(p, e)));
+        List<Playlist> all = List.copyOf(e.playlists.values());
+        return obj("playlists", list(all, p -> summary(p, e)));
     }
 
     /** A playlist with its (possibly filtered) songs. */
@@ -105,8 +100,8 @@ public class Json {
         return summary.substring(0, summary.length() - 1) + ",\"songs\":" + songs(songs).json() + "}";
     }
 
-    static String recent(List<Song> songs, int total) {
-        return obj("total", total, "songs", songs(songs));
+    static String recent(List<Song> songs) {
+        return obj("songs", songs(songs));
     }
 
     // ------------------------------------------------------------------ player and queue
@@ -114,92 +109,15 @@ public class Json {
     static String player(MusicEngine e, boolean ended) {
         Playlist p = e.activePlaylist();
         return obj("playlistId", p.id, "playlistName", p.name, "repeat", e.playback.repeat, "ended", ended,
-                "fromQueue", e.playback.currentSongId != e.playback.playlistPosSongId,
                 "queueCount", e.playback.queue.size(),
                 "song", e.currentSong());
     }
 
     static String queue(MusicEngine e) {
         return obj("current", e.currentSong(),
-                "playlistId", e.activePlaylist().id,
                 "playlistName", e.activePlaylist().name,
                 "queued", songs(e.queuedSongs()),
-                "next", songs(e.upNext(30)));
-    }
-
-    /** These are real songs, and their lyrics are not part of this project, so none are sent. */
-    static String lyrics(Song s) {
-        return obj("songId", s.id, "lines", new Raw("[]"));
-    }
-
-    // ------------------------------------------------------------------ artists, albums, home, stats
-
-    static String artistInfo(MusicEngine.ArtistInfo a) {
-        return obj("name", a.name(), "songs", a.songs(), "plays", a.plays(), "duration", a.duration());
-    }
-
-    static String albumInfo(MusicEngine.AlbumInfo a) {
-        return obj("name", a.name(), "artist", a.artist(), "year", a.year(), "songs", a.songs(),
-                "duration", a.duration(), "firstSongId", a.firstSongId());
-    }
-
-    static String artist(MusicEngine e, String name) {
-        List<Song> songs = e.songsByArtist(name);
-        int plays = 0;
-        int seconds = 0;
-        for (Song s : songs) {
-            plays += s.playCount;
-            seconds += s.duration;
-        }
-        String realName = songs.get(0).artist;
-        return obj("name", realName, "count", songs.size(), "plays", plays, "duration", seconds,
-                "songs", songs(songs),
-                "albums", list(e.albums(realName), Json::albumInfo));
-    }
-
-    static String album(MusicEngine e, String name, String artist) {
-        List<Song> songs = e.songsByAlbum(name, artist);
-        int seconds = 0;
-        for (Song s : songs) seconds += s.duration;
-        Song first = songs.get(0);
-        return obj("name", first.album, "artist", first.artist, "year", first.year, "genre", first.genre,
-                "firstSongId", first.id, "count", songs.size(), "duration", seconds, "songs", songs(songs));
-    }
-
-    static String home(MusicEngine e) {
-        StatsReport report = new StatsReport(e);
-        return obj("recent", songs(StatsReport.first(e.recentSongs(""), 10)),
-                "playlists", list(e.userPlaylists(), p -> summary(p, e)),
-                "topSongs", songs(StatsReport.first(report.topSongs, 5)),
-                "topArtists", list(StatsReport.first(report.topArtists, 6), Json::artistInfo),
-                "totalPlays", report.totalPlays,
-                "songCount", report.songCount);
-    }
-
-    static String stats(MusicEngine e) {
-        StatsReport r = new StatsReport(e);
-        return obj("totalPlays", r.totalPlays, "secondsListened", r.secondsListened,
-                "songs", r.songCount, "artists", r.artistCount, "albums", r.albumCount,
-                "playlists", r.playlistCount, "liked", r.likedCount,
-                "topSongs", songs(StatsReport.first(r.topSongs, 8)),
-                "topArtists", list(StatsReport.first(r.topArtists, 8), Json::artistInfo),
-                "genres", list(r.genres, g -> obj("name", g.name(), "songs", g.songs(), "plays", g.plays())));
-    }
-
-    /** Results for the command palette: songs, artists, albums and playlists that match. */
-    static String searchAll(MusicEngine e, String query) {
-        String q = MusicEngine.normalise(query);
-        if (q.isEmpty()) {
-            return "{\"songs\":[],\"artists\":[],\"albums\":[],\"playlists\":[]}";
-        }
-        return obj("songs", songs(StatsReport.first(e.songsOf(MusicEngine.LIBRARY_ID, q), 6)),
-                "artists", list(StatsReport.first(
-                        e.artists().stream().filter(a -> a.name().toLowerCase().contains(q)).toList(), 4), Json::artistInfo),
-                "albums", list(StatsReport.first(
-                        e.albums(null).stream().filter(a -> a.name().toLowerCase().contains(q)).toList(), 4), Json::albumInfo),
-                "playlists", list(StatsReport.first(
-                        e.userPlaylists().stream().filter(p -> p.name.toLowerCase().contains(q)).toList(), 4),
-                        p -> summary(p, e)));
+                "next", songs(e.upNext(10)));
     }
 
     // ------------------------------------------------------------------ results
@@ -210,11 +128,5 @@ public class Json {
 
     static String error(String message) {
         return obj("error", message);
-    }
-
-    static String error(String message, Map<String, String> fields) {
-        return obj("error", message, "fields",
-                new Raw("{" + String.join(",", fields.entrySet().stream()
-                        .map(f -> str(f.getKey()) + ":" + str(f.getValue())).toList()) + "}"));
     }
 }

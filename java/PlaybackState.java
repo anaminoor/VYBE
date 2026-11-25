@@ -167,16 +167,6 @@ class PlaybackState {
         queue.addAll(list);
     }
 
-    /** Jump straight to a song that is waiting in the queue. */
-    void queuePlay(int index) {
-        List<Integer> list = new ArrayList<>(queue);
-        if (index < 0 || index >= list.size()) throw new IllegalArgumentException("That song is no longer in the queue");
-        currentSongId = list.remove(index);
-        queue.clear();
-        queue.addAll(list);
-        recordPlay(currentSongId);
-    }
-
     void queueClear() {
         queue.clear();
     }

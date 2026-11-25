@@ -91,22 +91,19 @@ public class Cli {
             case "add" -> {
                 need(a, 2, "add <playlist> <song> [more songs...]");
                 int pl = playlistId(a[0]);
-                int n = engine.addSongs(pl, songIds(a, 1));
-                System.out.println("Added " + n + " song(s) to " + engine.playlist(pl).name);
+                for (int id : songIds(a, 1)) {
+                    engine.addSong(pl, id);
+                    System.out.println("Added " + engine.song(id).title + " to " + engine.playlist(pl).name);
+                }
                 return true;
             }
             case "remove", "rm" -> {
                 need(a, 2, "remove <playlist> <song> [more songs...]");
                 int pl = playlistId(a[0]);
-                int n = engine.removeSongs(pl, songIds(a, 1));
-                System.out.println("Removed " + n + " song(s) from " + engine.playlist(pl).name);
-                return true;
-            }
-            case "move" -> {
-                need(a, 3, "move <playlist> <song> <position>");
-                int pl = playlistId(a[0]);
-                engine.moveSong(pl, number(a[1]), number(a[2]) - 1);
-                printSongs(engine.playlist(pl).name, engine.songsOf(pl, ""));
+                for (int id : songIds(a, 1)) {
+                    engine.removeSong(pl, id);
+                    System.out.println("Removed " + engine.song(id).title + " from " + engine.playlist(pl).name);
+                }
                 return true;
             }
             case "shuffle" -> {
@@ -178,17 +175,6 @@ public class Cli {
                 }
                 return true;
             }
-            case "artists" -> {
-                for (MusicEngine.ArtistInfo ar : engine.artists()) {
-                    System.out.printf("  %-28s %2d song(s)  %3d plays%n", ar.name(), ar.songs(), ar.plays());
-                }
-            }
-            case "albums" -> {
-                for (MusicEngine.AlbumInfo al : engine.albums(null)) {
-                    System.out.printf("  %-30s %-22s %s%n", al.name(), al.artist(), al.year() > 0 ? al.year() : "");
-                }
-            }
-            case "stats" -> stats();
             default -> System.out.println("Unknown command '" + cmd + "'. Type 'help'.");
         }
         return false;
@@ -210,7 +196,6 @@ public class Cli {
               delete <playlist>            delete a playlist
               add <playlist> <song>...     add one or more songs
               remove <playlist> <song>...  remove one or more songs
-              move <playlist> <song> <pos> move a song to a position (1 = top)
               shuffle <playlist>           shuffle the order
               sort <playlist> <field> [asc|desc]
                                            field: title artist album genre year duration plays added
@@ -222,7 +207,6 @@ public class Cli {
               queue                        show the play-next queue
               queue add <song>... / queue remove <pos> / queue clear
               recent [text]                recently played
-              artists / albums / stats
               quit""");
     }
 
@@ -246,8 +230,7 @@ public class Cli {
         System.out.printf("  %-6s %-30s %d%n", "all", "All Songs", engine.playlist(MusicEngine.LIBRARY_ID).songIds.size());
         System.out.printf("  %-6s %-30s %d%n", "liked", "Liked Songs", engine.playlist(MusicEngine.LIKED_ID).songIds.size());
         for (Playlist p : engine.userPlaylists()) {
-            String name = (p.emoji.isEmpty() ? "" : p.emoji + " ") + p.name;
-            System.out.printf("  %-6d %-30s %d%n", p.id, cut(name, 30), p.songIds.size());
+            System.out.printf("  %-6d %-30s %d%n", p.id, cut(p.name, 30), p.songIds.size());
         }
     }
 
@@ -265,17 +248,6 @@ public class Cli {
             for (Song u : up) names.add(u.title);
             System.out.println("Up next: " + String.join(", ", names));
         }
-    }
-
-    private void stats() {
-        StatsReport r = new StatsReport(engine);
-        System.out.println("Songs: " + r.songCount + "   Artists: " + r.artistCount + "   Albums: " + r.albumCount
-                + "   Playlists: " + r.playlistCount + "   Liked: " + r.likedCount);
-        System.out.println("Total plays: " + r.totalPlays + "   Time listened: " + (r.secondsListened / 60) + " min");
-        System.out.println("Top songs:");
-        for (Song s : StatsReport.first(r.topSongs, 5)) System.out.printf("  %3d  %s - %s%n", s.playCount, s.title, s.artist);
-        System.out.println("Top artists:");
-        for (MusicEngine.ArtistInfo ar : StatsReport.first(r.topArtists, 5)) System.out.printf("  %3d  %s%n", ar.plays(), ar.name());
     }
 
     // ------------------------------------------------------------------ parsing helpers
